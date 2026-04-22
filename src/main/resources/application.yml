@@ -22,10 +22,10 @@ spring:
       # In production, switch this to "validate" and use Flyway/Liquibase migrations
       ddl-auto: update
     show-sql: true          # Logs every SQL query — useful for debugging
+    open-in-view: false
     properties:
       hibernate:
         format_sql: true    # Pretty-prints SQL in logs
-        dialect: org.hibernate.dialect.PostgreSQLDialect
 
 # ── Server ────────────────────────────────────
 server:
