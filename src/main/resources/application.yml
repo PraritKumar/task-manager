@@ -1,0 +1,40 @@
+# ──────────────────────────────────────────────
+#  Task Manager API — Application Configuration
+# ──────────────────────────────────────────────
+
+spring:
+  application:
+    name: task-manager
+
+  # ── Database (PostgreSQL) ──────────────────
+  datasource:
+    # When running with Docker Compose, "db" is the container name (acts as hostname)
+    # When running locally, change "db" to "localhost"
+    url: jdbc:postgresql://db:5432/taskmanager
+    username: postgres
+    password: postgres
+    driver-class-name: org.postgresql.Driver
+
+  # ── JPA / Hibernate ───────────────────────
+  jpa:
+    hibernate:
+      # "update" = Hibernate auto-creates/updates tables based on our @Entity classes
+      # In production, switch this to "validate" and use Flyway/Liquibase migrations
+      ddl-auto: update
+    show-sql: true          # Logs every SQL query — useful for debugging
+    properties:
+      hibernate:
+        format_sql: true    # Pretty-prints SQL in logs
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+
+# ── Server ────────────────────────────────────
+server:
+  port: 8080
+
+# ── Swagger UI ────────────────────────────────
+# After starting the app, visit: http://localhost:8080/swagger-ui.html
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /swagger-ui.html
