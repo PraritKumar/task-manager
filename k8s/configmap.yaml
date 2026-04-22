@@ -1,0 +1,21 @@
+# ─────────────────────────────────────────────────────────────
+# CONFIGMAP — stores non-secret configuration
+#
+# WHY NOT HARDCODE CONFIG IN THE DEPLOYMENT?
+# Separation of concerns — config changes don't require
+# rebuilding your Docker image. Just update the ConfigMap.
+#
+# For SECRETS (passwords, API keys), use a Kubernetes Secret instead.
+# ConfigMap is for non-sensitive config only.
+# ─────────────────────────────────────────────────────────────
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: task-manager-config
+  namespace: default
+data:
+  SPRING_DATASOURCE_URL: "jdbc:postgresql://postgres-service:5432/taskmanager"
+  SPRING_DATASOURCE_USERNAME: "postgres"
+  SPRING_JPA_HIBERNATE_DDL_AUTO: "update"
+  SPRING_JPA_SHOW_SQL: "false"
+  SERVER_PORT: "8080"

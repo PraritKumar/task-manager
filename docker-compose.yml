@@ -1,0 +1,69 @@
+# ─────────────────────────────────────────────────────────────
+# DOCKER COMPOSE — Runs multiple containers as one application
+#
+# We need TWO containers:
+#   1. "app"  → our Spring Boot application
+#   2. "db"   → PostgreSQL database
+#
+# Without Compose, you'd have to start each container manually
+# with long docker run commands. Compose does it in one command:
+#   docker-compose up --build
+# ─────────────────────────────────────────────────────────────
+
+version: '3.8'
+
+services:
+
+  # ── PostgreSQL Database ───────────────────────────────────
+  db:
+    image: postgres:16-alpine          # Official Postgres image, alpine = smaller
+    container_name: task-manager-db
+
+    environment:
+      POSTGRES_DB: taskmanager         # Database name
+      POSTGRES_USER: postgres          # Username
+      POSTGRES_PASSWORD: postgres      # Password
+
+    ports:
+      - "5432:5432"                    # host:container — lets you connect from IntelliJ
+
+    volumes:
+      # Named volume: persists DB data even when containers are stopped/restarted
+      # Without this, all your data is LOST every time you stop the container
+      - postgres_data:/var/lib/postgresql/data
+
+    healthcheck:
+      # Wait until Postgres is actually ready before starting the app
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── Spring Boot Application ───────────────────────────────
+  app:
+    build:
+      context: .                       # Build from Dockerfile in current directory
+      dockerfile: Dockerfile
+
+    container_name: task-manager-app
+
+    ports:
+      - "8080:8080"                    # Expose app on localhost:8080
+
+    environment:
+      # Override application.yml settings with environment variables
+      # Spring Boot automatically reads SPRING_* env vars
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/taskmanager
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: postgres
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+
+    depends_on:
+      db:
+        condition: service_healthy     # Only start app AFTER db healthcheck passes
+
+    restart: unless-stopped            # Auto-restart on crash
+
+# ── Named Volumes ─────────────────────────────────────────────
+volumes:
+  postgres_data:                       # Persistent storage for Postgres data

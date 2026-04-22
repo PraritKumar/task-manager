@@ -1,0 +1,52 @@
+# ─────────────────────────────────────────────────────────────
+# SERVICE — gives your pods a stable network endpoint
+#
+# WHY DO WE NEED THIS?
+# Pods are ephemeral — they die and restart with NEW IP addresses.
+# A Service provides a stable DNS name + IP that never changes,
+# and load-balances traffic across all healthy pods.
+#
+# Service Types:
+#   ClusterIP    → Only accessible inside the cluster (default)
+#   NodePort     → Accessible from outside via node's IP + port
+#   LoadBalancer → Creates a cloud load balancer (AWS/Azure/GCP)
+# ─────────────────────────────────────────────────────────────
+
+# ── App Service ───────────────────────────────────────────────
+apiVersion: v1
+kind: Service
+metadata:
+  name: task-manager-service
+  namespace: default
+spec:
+  # NodePort: exposes the service on each node's IP at a static port
+  # Good for development. In production, use LoadBalancer or Ingress.
+  type: NodePort
+
+  # Routes traffic to pods with this label
+  selector:
+    app: task-manager
+
+  ports:
+    - protocol: TCP
+      port: 80           # The port the Service listens on (inside cluster)
+      targetPort: 8080   # The port your container listens on
+      nodePort: 30080    # The port exposed on the Node (30000-32767 range)
+
+---
+
+# ── PostgreSQL Service ────────────────────────────────────────
+# Internal service for the app to reach the database
+# ClusterIP = only reachable from within the cluster (correct for DB)
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-service
+  namespace: default
+spec:
+  type: ClusterIP
+  selector:
+    app: postgres
+  ports:
+    - port: 5432
+      targetPort: 5432

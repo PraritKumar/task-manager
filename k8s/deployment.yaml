@@ -1,0 +1,95 @@
+# ─────────────────────────────────────────────────────────────
+# DEPLOYMENT — tells Kubernetes HOW to run your app
+#
+# Key decisions made here:
+#   - Which Docker image to use
+#   - How many replicas (copies) to run
+#   - Resource limits (CPU/RAM per pod)
+#   - Health checks (when to restart a pod)
+#   - Rolling update strategy (zero-downtime deploys)
+# ─────────────────────────────────────────────────────────────
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: task-manager-deployment
+  namespace: default
+  labels:
+    app: task-manager
+spec:
+
+  # Run 2 replicas = 2 pods = 2 instances of your app running simultaneously
+  # If one crashes, the other keeps serving traffic while K8s restarts the dead one
+  replicas: 2
+
+  # Selector: tells the Deployment which pods it manages
+  # Must match the labels in the pod template below
+  selector:
+    matchLabels:
+      app: task-manager
+
+  # Rolling Update Strategy — zero-downtime deployments
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1           # Start 1 new pod before killing an old one
+      maxUnavailable: 0     # Never have 0 pods running during update
+
+  # Pod Template — blueprint for each pod
+  template:
+    metadata:
+      labels:
+        app: task-manager   # Must match selector.matchLabels above
+    spec:
+      containers:
+        - name: task-manager
+          # Replace with your actual Docker Hub image after pushing:
+          # docker build -t praritkumar/task-manager:latest .
+          # docker push praritkumar/task-manager:latest
+          image: praritkumar/task-manager:latest
+          imagePullPolicy: Always
+
+          ports:
+            - containerPort: 8080
+
+          # Load environment variables from our ConfigMap
+          envFrom:
+            - configMapRef:
+                name: task-manager-config
+
+          # Secret env var (password) — loaded from a Kubernetes Secret
+          env:
+            - name: SPRING_DATASOURCE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: task-manager-secret
+                  key: db-password
+
+          # RESOURCE LIMITS — critical in production
+          # Without limits, one pod can starve all others on the node
+          resources:
+            requests:
+              memory: "256Mi"   # Minimum memory guaranteed to this pod
+              cpu: "250m"       # 250 millicores = 0.25 CPU cores
+            limits:
+              memory: "512Mi"   # Pod is killed if it exceeds this
+              cpu: "500m"       # Throttled if it exceeds this
+
+          # LIVENESS PROBE — "Is the app alive?"
+          # If this fails, Kubernetes RESTARTS the pod
+          livenessProbe:
+            httpGet:
+              path: /api/v1/tasks    # Hits our GET all endpoint
+              port: 8080
+            initialDelaySeconds: 45  # Wait 45s for Spring Boot to start
+            periodSeconds: 10        # Check every 10s
+            failureThreshold: 3      # Restart after 3 consecutive failures
+
+          # READINESS PROBE — "Is the app ready to receive traffic?"
+          # If this fails, Kubernetes removes the pod from the load balancer
+          # (but does NOT restart it — just stops sending traffic)
+          readinessProbe:
+            httpGet:
+              path: /api/v1/tasks
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 5
